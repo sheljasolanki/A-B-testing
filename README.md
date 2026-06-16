@@ -41,7 +41,7 @@ unlikely to be due to random chance.
 ## Project Structure
 ├── cookie_cats.csv          # Raw dataset
 
-├── explore.ipynb            # Full analysis notebook
+├── Testing.ipynb            # Full analysis notebook
 
 ├── app.py                   # Streamlit interactive app
 
