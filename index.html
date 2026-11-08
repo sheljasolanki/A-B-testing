@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gate 30 vs Gate 40</title>
+<meta name="description" content="A/B test analysis of gate placement in a mobile puzzle game: does a gate at level 30 or level 40 keep more players coming back after 7 days?">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3' y='3' width='26' height='26' rx='8' fill='%23ff8fab' transform='rotate(-8 16 16)'/><text x='16' y='22' font-size='16' text-anchor='middle'>🔒</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fff6ee; --card:#ffffff; --ink:#3b2a4a; --muted:#7d6a8a; --soft:#f3ece6; --edge:#f1dccb;
+  --g30:#2a9d8f; --g40:#e76f51; --accent:#e5527a; --warn:#d97706; --warn-bg:#fff4e0; --ok:#2a9d8f; --ok-bg:#e3f6f1;
+  --hero:linear-gradient(135deg,#ffd6e0 0%,#ffe8c7 55%,#d9f2e6 100%); --blob:rgba(255,255,255,.4);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1524; --card:#2a2034; --ink:#f6ecf8; --muted:#b8a6c4; --soft:#3a2e45; --edge:#120c18;
+    --g30:#4fd1c0; --g40:#ff8a6b; --accent:#ff7aa2; --warn:#fbbf24; --warn-bg:#3a2c16; --ok:#4fd1c0; --ok-bg:#183530;
+    --hero:linear-gradient(135deg,#4a2440 0%,#4a3420 55%,#1f3d36 100%); --blob:rgba(255,255,255,.06);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1524; --card:#2a2034; --ink:#f6ecf8; --muted:#b8a6c4; --soft:#3a2e45; --edge:#120c18;
+  --g30:#4fd1c0; --g40:#ff8a6b; --accent:#ff7aa2; --warn:#fbbf24; --warn-bg:#3a2c16; --ok:#4fd1c0; --ok-bg:#183530;
+  --hero:linear-gradient(135deg,#4a2440 0%,#4a3420 55%,#1f3d36 100%); --blob:rgba(255,255,255,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{background:var(--bg);color:var(--ink);font-family:Fredoka,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+p,li,td,th,.sans{font-family:Inter,system-ui,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* nav */
+nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px)}
+nav .wrap{display:flex;justify-content:space-between;align-items:center;height:68px;gap:12px}
+.brand{font-weight:700;font-size:20px;display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);white-space:nowrap}
+.blob{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,#ff8fab,#ffb86b);transform:rotate(-8deg);display:inline-block}
+.links{display:flex;gap:8px;align-items:center}
+.links a,.iconbtn{background:var(--card);padding:7px 14px;border-radius:999px;box-shadow:0 2px 0 var(--edge);color:var(--ink);text-decoration:none;font-size:15px;border:0;cursor:pointer;font-family:inherit}
+.links a:hover,.iconbtn:hover{transform:translateY(-1px)}
+.iconbtn{padding:7px 11px}
+
+/* hero */
+.hero{background:var(--hero);border-radius:32px;padding:56px 48px;position:relative;overflow:hidden;margin-top:8px}
+.hero:before,.hero:after{content:"";position:absolute;border-radius:50%;background:var(--blob)}
+.hero:before{right:-60px;top:-60px;width:260px;height:260px}
+.hero:after{right:120px;bottom:-90px;width:180px;height:180px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border-radius:999px;padding:7px 15px;font-size:15px;font-weight:600;color:var(--accent);position:relative;z-index:1}
+.hero h1{font-size:clamp(34px,5.5vw,56px);line-height:1.04;margin:16px 0 14px;font-weight:700;max-width:760px;position:relative;z-index:1}
+.hero p{font-size:18px;line-height:1.6;max-width:620px;color:color-mix(in srgb,var(--ink) 80%,transparent);position:relative;z-index:1}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:18px}
+.stat{background:var(--card);border-radius:22px;padding:20px;box-shadow:0 4px 0 var(--edge)}
+.stat .v{font-size:34px;font-weight:700;line-height:1.1}
+.stat .k{font-family:Inter,sans-serif;font-size:13px;color:var(--muted);margin-top:4px}
+
+/* sections */
+section{padding:72px 0 0}
+.eyebrow{display:inline-block;font-size:14px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);padding:5px 12px;border-radius:999px}
+h2{font-size:clamp(28px,4vw,38px);line-height:1.1;margin:12px 0 10px;font-weight:700}
+.intro{font-size:17px;line-height:1.65;color:var(--muted);max-width:720px;margin-bottom:22px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:var(--card);border-radius:24px;padding:24px;box-shadow:0 4px 0 var(--edge);min-width:0}
+.card h3{font-size:21px;margin-bottom:8px;font-weight:600}
+.card p{font-size:15px;line-height:1.65;color:var(--muted)}
+.card p+p{margin-top:10px}
+.card b,.intro b{color:var(--ink)}
+.badge{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:600;padding:4px 11px;border-radius:999px;margin-bottom:10px}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.big{font-size:44px;font-weight:700;line-height:1}
+svg text{font-family:Fredoka,sans-serif}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;margin:6px 0 4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:4px;display:inline-block}
+
+/* level path */
+.path-row{display:grid;grid-template-columns:90px 1fr;align-items:center;gap:12px;margin:10px 0}
+.path-row .name{font-weight:600}
+.path{width:100%;height:auto;display:block}
+
+/* toggle */
+.seg{display:inline-flex;background:var(--soft);border-radius:999px;padding:4px;gap:4px;margin:6px 0 18px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;font-family:Fredoka,sans-serif;font-size:15px;padding:8px 16px;border-radius:999px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 2px 0 var(--edge);font-weight:600}
+.callout{border-radius:18px;padding:14px 16px;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;margin-top:14px;transition:background .25s}
+
+/* bars */
+.pbar{display:grid;grid-template-columns:80px 1fr 64px;align-items:center;gap:10px;margin:10px 0;font-size:15px}
+.pbar .track{height:24px;background:var(--soft);border-radius:999px;overflow:hidden}
+.pbar .fill{height:100%;border-radius:999px;transition:width .6s cubic-bezier(.3,1.4,.5,1)}
+.pbar .num{font-weight:600;text-align:right}
+.bargroup+.bargroup{margin-top:22px}
+.bargroup h4{font-size:16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* table */
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--soft)}
+th{color:var(--muted);font-weight:500}
+td.r,th.r{text-align:right}
+.tblwrap{overflow-x:auto}
+
+/* sliders */
+.sl label{display:flex;justify-content:space-between;font-family:Inter,sans-serif;font-size:14px;margin:16px 0 6px;color:var(--muted)}
+.sl label b{color:var(--ink);font-family:Fredoka,sans-serif;font-size:16px}
+input[type=range]{width:100%;accent-color:var(--accent);height:24px}
+.scen{text-align:center}
+.scen .t{font-size:14px;color:var(--muted);font-family:Inter,sans-serif}
+.scen .v{font-size:30px;font-weight:700;margin:6px 0 2px}
+.scen .s{font-size:13px;color:var(--muted);font-family:Inter,sans-serif}
+.scen.mid{background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 14%,var(--card)),var(--card))}
+.scen.mid .v{color:var(--accent)}
+
+/* chart tooltip */
+.chartbox{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-family:Inter,sans-serif;font-size:13px;padding:8px 10px;border-radius:10px;white-space:nowrap;opacity:0;transition:opacity .15s;transform:translate(-50%,-110%)}
+
+.verdict{background:var(--hero);border-radius:28px;padding:36px;display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+.verdict .emo{font-size:56px}
+.verdict h3{font-size:28px;margin-bottom:6px}
+.verdict p{font-size:16px;line-height:1.6}
+ul.clean{list-style:none;display:grid;gap:12px}
+ul.clean li{font-size:15px;line-height:1.6;color:var(--muted);padding-left:30px;position:relative}
+ul.clean li:before{content:attr(data-i);position:absolute;left:0;top:0}
+footer{margin:72px 0 40px;text-align:center;color:var(--muted);font-family:Inter,sans-serif;font-size:14px;line-height:1.8}
+footer .btns{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+footer .btns a{background:var(--card);box-shadow:0 3px 0 var(--edge);padding:10px 18px;border-radius:999px;text-decoration:none;color:var(--ink);font-family:Fredoka,sans-serif;font-size:16px}
+
+@media (max-width:860px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .links a.hide-sm{display:none}
+}
+@media (max-width:560px){
+  .wrap{padding:0 16px}
+  .hero{padding:32px 22px;border-radius:24px}
+  .stat .v{font-size:26px}
+  .stats{gap:10px}
+  .stat{padding:16px}
+  .card{padding:20px}
+  .verdict{grid-template-columns:1fr;padding:26px}
+  .links a{display:none}
+  .path-row{grid-template-columns:1fr;gap:4px}
+  .pbar{grid-template-columns:64px 1fr 56px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="blob"></span>Gate 30 vs 40</a>
+    <div class="links">
+      <a href="#experiment" class="hide-sm">Experiment</a>
+      <a href="#results">Results</a>
+      <a href="#bayes" class="hide-sm">Bayesian</a>
+      <a href="#impact">Impact</a>
+      <button class="iconbtn" id="themeBtn" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap" id="top">
+
+  <!-- HERO -->
+  <header class="hero">
+    <span class="chip">🏆 Winner: Gate 30</span>
+    <h1>Where should a game make players wait?</h1>
+    <p>90,189 players of a mobile puzzle game, two gate positions, one question: which keeps more people coming back after a week? The earlier gate wins, by a small but statistically reliable margin.</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="v" style="color:var(--g30)" data-k="p30_7">–</div><div class="k">come back on day 7 · gate 30</div></div>
+    <div class="stat"><div class="v" style="color:var(--g40)" data-k="p40_7">–</div><div class="k">come back on day 7 · gate 40</div></div>
+    <div class="stat"><div class="v" data-k="lift">–</div><div class="k">more retained players with gate 30</div></div>
+    <div class="stat"><div class="v" data-k="pbetter">–</div><div class="k">probability gate 30 is truly better</div></div>
+  </div>
+
+  <!-- EXPERIMENT -->
+  <section id="experiment">
+    <span class="eyebrow">01 · The experiment</span>
+    <h2>Two versions, one locked gate</h2>
+    <p class="intro">In this game, a <b>gate</b> stops progress until the player waits or pays. New players were randomly given one of two versions: the first gate at <b>level 30</b> (the original) or at <b>level 40</b>. The main metric is <b>7-day retention</b>: did the player open the game again 7 days after installing?</p>
+    <div class="card">
+      <div class="path-row"><div class="name" style="color:var(--g30)">Gate 30</div><svg class="path" id="path30" aria-label="Level path with a gate at level 30"></svg></div>
+      <div class="path-row"><div class="name" style="color:var(--g40)">Gate 40</div><svg class="path" id="path40" aria-label="Level path with a gate at level 40"></svg></div>
+      <p style="margin-top:10px">Each dot is a level. Dataset: <a href="https://www.kaggle.com/datasets/yufengsui/mobile-games-ab-testing" target="_blank" rel="noopener">Mobile Games A/B Testing (Kaggle)</a>, with one row per player: version, game rounds played in the first 14 days, and day-1 / day-7 retention.</p>
+    </div>
+  </section>
+
+  <!-- HEALTH CHECKS -->
+  <section id="checks">
+    <span class="eyebrow">02 · Health checks</span>
+    <h2>Before trusting results, check the test itself</h2>
+    <p class="intro">A broken experiment can produce convincing but wrong numbers, so I ran two checks before comparing retention.</p>
+    <div class="grid2">
+      <div class="card">
+        <span class="badge warn">⚠️ Flagged</span>
+        <h3>Sample ratio mismatch</h3>
+        <div class="big" style="margin:6px 0 10px">49.6% <span style="color:var(--muted);font-size:24px">/</span> 50.4%</div>
+        <p>The split should be 50/50. With 90k players, even this small gap is unlikely to be chance (chi-square <b>p = 0.0086</b>). The cause can't be found from this data, and the gap is small, so I continue but report it as a limitation. In a real team this goes to data engineering first.</p>
+      </div>
+      <div class="card">
+        <span class="badge ok">✓ Passed</span>
+        <h3>Removing players who never played</h3>
+        <div class="big" style="margin:6px 0 10px">3,994 <span style="color:var(--muted);font-size:20px">players removed</span></div>
+        <p>Players with 0 rounds never reached any gate, so the gate couldn't affect them. Both groups lose a similar share (4.3% vs 4.5%, <b>p = 0.17</b>), so removing them doesn't favour either side. 86,195 players remain.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAP -->
+  <section id="trap">
+    <span class="eyebrow">03 · The trap I avoided</span>
+    <h2>A filter that flips the answer</h2>
+    <p class="intro">My first idea was to keep only players who actually <b>reached</b> their gate, since only they "felt" it. Try it:</p>
+    <div class="card">
+      <div class="seg" role="group" aria-label="Choose which players to compare">
+        <button aria-pressed="true" data-trap="all">All players (randomized)</button>
+        <button aria-pressed="false" data-trap="reached">Only players who reached their gate</button>
+      </div>
+      <div class="pbar"><span style="color:var(--g30);font-weight:600">Gate 30</span><div class="track"><div class="fill" id="trap30" style="background:var(--g30)"></div></div><span class="num" id="trap30n"></span></div>
+      <div class="pbar"><span style="color:var(--g40);font-weight:600">Gate 40</span><div class="track"><div class="fill" id="trap40" style="background:var(--g40)"></div></div><span class="num" id="trap40n"></span></div>
+      <div class="callout" id="trapNote"></div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="results">
+    <span class="eyebrow">04 · Results</span>
+    <h2>The gap only appears after a week</h2>
+    <p class="intro">On day 1 both versions look the same. By day 7, gate 30 keeps <b data-k="pp7">–</b> more players out of every 100, which is <b data-k="lift2">–</b> more in relative terms.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Out of every 100 players…</h3>
+        <div class="bargroup">
+          <h4>…came back on day 1 <span class="badge" style="margin:0;background:var(--soft);color:var(--muted)">not significant</span></h4>
+          <div class="pbar"><span style="color:var(--g30)">Gate 30</span><div class="track"><div class="fill" style="background:var(--g30)" data-w="p30_1"></div></div><span class="num" data-k="p30_1"></span></div>
+          <div class="pbar"><span style="color:var(--g40)">Gate 40</span><div class="track"><div class="fill" style="background:var(--g40)" data-w="p40_1"></div></div><span class="num" data-k="p40_1"></span></div>
+        </div>
+        <div class="bargroup">
+          <h4>…came back on day 7 <span class="badge ok" style="margin:0">significant</span></h4>
+          <div class="pbar"><span style="color:var(--g30)">Gate 30</span><div class="track"><div class="fill" style="background:var(--g30)" data-w="p30_7"></div></div><span class="num" data-k="p30_7"></span></div>
+          <div class="pbar"><span style="color:var(--g40)">Gate 40</span><div class="track"><div class="fill" style="background:var(--g40)" data-w="p40_7"></div></div><span class="num" data-k="p40_7"></span></div>
+        </div>
+        <p style="margin-top:14px">Bars are scaled to 50% so the gaps are visible.</p>
+      </div>
+      <div class="card">
+        <h3>How big is the real difference?</h3>
+        <p>95% confidence intervals for gate 30 − gate 40, in percentage points. If a bar crosses zero, "no difference" is still plausible. Hover or tap a bar for details.</p>
+        <div class="chartbox"><svg id="ciChart" viewBox="0 0 440 212" width="100%" role="img" aria-label="Confidence intervals for the retention difference"></svg><div class="tip" id="ciTip"></div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>The statistics</h3>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>Metric</th><th class="r">Gate 30</th><th class="r">Gate 40</th><th class="r">Difference</th><th class="r">z</th><th class="r">p-value</th><th class="r">95% CI (pp)</th></tr></thead>
+          <tbody id="statsBody"></tbody>
+        </table>
+      </div>
+      <p style="margin-top:12px">Two-sided two-proportion z-test, α = 0.05. With about 43,000 players per group, the test had <b>~85% power</b> to detect the observed day-7 gap, and the smallest gap it can reliably detect is about 0.76 pp. The day-1 gap is below the ~0.96 pp it can detect for that metric, so day 1 means <b>"too small to tell"</b>, not "no effect".</p>
+    </div>
+  </section>
+
+  <!-- BAYES -->
+  <section id="bayes">
+    <span class="eyebrow">05 · Bayesian view</span>
+    <h2>How sure can we be?</h2>
+    <p class="intro">A p-value says how surprising the data would be if nothing changed. A Bayesian model answers the more natural question: <b>what is the probability gate 30 is actually better?</b> Each version's true retention rate gets a Beta posterior, starting from a flat prior.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Plausible true 7-day retention</h3>
+        <div class="legend"><span><i style="background:var(--g30)"></i>Gate 30</span><span><i style="background:var(--g40)"></i>Gate 40</span></div>
+        <svg id="postChart" viewBox="0 0 440 210" width="100%" role="img" aria-label="Posterior distributions of 7-day retention"></svg>
+        <p>The two curves barely overlap, so there is almost no plausible scenario where gate 40 has the higher true rate.</p>
+      </div>
+      <div class="card sl">
+        <h3>"Better by at least…"</h3>
+        <p>A tiny edge may not matter to the business. Choose the smallest gap you would care about:</p>
+        <label><span>Minimum meaningful gap</span><b id="thrOut">0.00 pp</b></label>
+        <input type="range" id="thr" min="0" max="1.5" step="0.05" value="0" aria-label="Minimum meaningful gap in percentage points">
+        <div style="margin-top:22px;text-align:center">
+          <div class="big" id="thrProb" style="color:var(--accent);font-size:56px">–</div>
+          <p id="thrText" style="margin-top:6px"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAMEPLAY -->
+  <section id="gameplay">
+    <span class="eyebrow">06 · Did players quit at the wall?</span>
+    <h2>Same amount of play, different return rate</h2>
+    <p class="intro">If gate 40 made players quit at the wall, fewer gate-40 players would get past round 40. They don't: the curves for <b>share of players who played at least k rounds</b> are nearly identical. The gate changes whether players <b>come back</b>, not visibly how much they play.</p>
+    <div class="card">
+      <div class="legend"><span><i style="background:var(--g30)"></i>Gate 30</span><span><i style="background:var(--g40)"></i>Gate 40</span><span class="sans" style="color:var(--muted)">Hover or tap the chart to compare</span></div>
+      <div class="chartbox"><svg id="survChart" width="100%" role="img" aria-label="Share of players who played at least k rounds"></svg><div class="tip" id="survTip"></div></div>
+      <p style="margin-top:8px">Rounds played in the first 14 days. Rounds include replays, so they aren't the same as levels reached. Median: 18 rounds in both groups (Mann-Whitney p = 0.12).</p>
+    </div>
+  </section>
+
+  <!-- IMPACT -->
+  <section id="impact">
+    <span class="eyebrow">07 · Business impact</span>
+    <h2>💰 What's it worth?</h2>
+    <p class="intro">Retention only applies to <b>new install cohorts</b>: extra retained players per day = installs × retention gap. The two inputs aren't in the dataset, so set your own. The range comes from the 95% confidence interval.</p>
+    <div class="grid2">
+      <div class="card sl">
+        <h3>Your assumptions</h3>
+        <label><span>New installs per day</span><b id="instOut"></b></label>
+        <input type="range" id="inst" min="5000" max="500000" step="5000" value="50000" aria-label="New installs per day">
+        <label><span>Value of one extra retained player (₹)</span><b id="valOut"></b></label>
+        <input type="range" id="val" min="1" max="500" step="1" value="5" aria-label="Value of one retained player in rupees">
+        <p style="margin-top:16px">Value per player is a placeholder. A real analysis would use the incremental lifetime value (LTV) of a player retained at day 7.</p>
+      </div>
+      <div class="grid3" style="grid-template-columns:1fr;gap:12px">
+        <div class="card scen"><div class="t">Worst case (CI low)</div><div class="v" id="impLo"></div><div class="s" id="impLoS"></div></div>
+        <div class="card scen mid"><div class="t">Most likely (observed)</div><div class="v" id="impMid"></div><div class="s" id="impMidS"></div></div>
+        <div class="card scen"><div class="t">Best case (CI high)</div><div class="v" id="impHi"></div><div class="s" id="impHiS"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONCLUSION -->
+  <section id="conclusion">
+    <span class="eyebrow">08 · Verdict</span>
+    <h2>Keep the gate at level 30</h2>
+    <div class="verdict" style="margin-top:14px">
+      <div class="emo">🔒</div>
+      <div>
+        <h3>Small effect, consistent signal</h3>
+        <p>Gate 30 retains about 4% more players at day 7. The z-test, the confidence interval and the Bayesian model all agree, and the experiment was large enough to detect an effect of this size. Moving the gate to level 40 would quietly lose players every day.</p>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:16px">
+      <div class="card">
+        <h3>Limitations</h3>
+        <ul class="clean">
+          <li data-i="⚠️">Sample ratio mismatch (49.6% / 50.4%). The cause should be investigated before acting.</li>
+          <li data-i="💭">Revenue numbers are illustrative. Real install volume and player LTV are needed.</li>
+          <li data-i="📅">Only day-1 and day-7 retention exist. Long-term retention, purchases and novelty effects are unmeasured.</li>
+          <li data-i="🎮">Rounds played aren't levels reached, so the exact quit point can't be seen.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Methods</h3>
+        <ul class="clean">
+          <li data-i="🧹">Data checks: duplicates, missing values, a 49,854-round logging outlier.</li>
+          <li data-i="⚖️">Sample-ratio test, then modified intention-to-treat (players with ≥ 1 round).</li>
+          <li data-i="📐">Two-proportion z-test, Wald confidence intervals, power analysis.</li>
+          <li data-i="🎲">Beta-Binomial Bayesian model with a flat prior.</li>
+          <li data-i="🐍">Python · pandas · SciPy · statsmodels · seaborn. This page has no dependencies: all statistics are recomputed in the browser from the raw counts.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="btns">
+      <a href="https://github.com/sheljasolanki/A-B-testing/blob/main/Testing.ipynb" target="_blank" rel="noopener">📓 Full notebook</a>
+      <a href="https://github.com/sheljasolanki/A-B-testing" target="_blank" rel="noopener">⭐ GitHub repo</a>
+    </div>
+    A/B test analysis by Shelja Solanki · Data: Mobile Games A/B Testing dataset (Kaggle)
+  </footer>
+</main>
+
+<script>
+/* ---------- raw data (from cookie_cats.csv, players with ≥ 1 round) ---------- */
+const DATA = {"gate_30":{"n":42763,"r1":19993,"r7":8486,"surv":[100.0,93.57,88.43,83.99,79.71,76.34,73.02,70.21,67.5,65.16,63.2,61.3,59.47,57.65,55.93,54.23,52.69,51.23,49.8,48.49,47.27,46.08,45.07,44.05,43.07,42.13,41.3,40.48,39.66,38.95,38.25,37.6,36.84,36.08,35.28,34.51,33.81,33.13,32.43,31.72,31.07,30.46,29.91,29.37,28.83,28.39,27.88,27.38,26.89,26.49,26.04,25.65,25.27,24.87,24.55,24.16,23.8,23.46,23.12,22.83,22.51,22.18,21.9,21.59,21.3,21.03,20.79,20.54,20.29,20.04,19.77,19.49,19.26,19.04,18.83,18.63,18.41,18.19,18.02,17.83,17.63,17.42,17.22,17.01,16.83,16.66,16.49,16.3,16.12,15.95,15.79,15.63,15.49,15.34,15.22,15.02,14.87,14.74,14.58,14.42]},"gate_40":{"n":43432,"r1":20073,"r7":8266,"surv":[100.0,93.58,88.03,83.29,79.15,75.58,72.27,69.55,67.01,64.67,62.56,60.63,58.82,56.94,55.13,53.48,51.91,50.42,49.0,47.62,46.44,45.24,44.09,43.07,42.2,41.31,40.53,39.68,38.97,38.25,37.46,36.69,35.94,35.29,34.71,34.11,33.53,32.91,32.39,31.84,31.31,30.85,30.31,29.89,29.46,28.97,28.54,28.09,27.61,27.25,26.88,26.44,26.03,25.65,25.21,24.84,24.49,24.14,23.78,23.43,23.11,22.79,22.51,22.24,21.98,21.7,21.36,21.09,20.83,20.51,20.27,20.04,19.79,19.55,19.3,19.05,18.85,18.64,18.4,18.21,17.98,17.79,17.61,17.4,17.22,17.03,16.86,16.67,16.49,16.32,16.13,15.95,15.78,15.62,15.46,15.28,15.12,14.93,14.77,14.62]}};
+/* players who reached their own gate (≥30 rounds for gate 30, ≥40 for gate 40) – the rejected filter */
+const REACHED = {g30:{n:16656, r7:7308}, g40:{n:13827, r7:6707}};
+
+/* ---------- stats helpers ---------- */
+const erf = x => { // Abramowitz–Stegun 7.1.26
+  const s = Math.sign(x); x = Math.abs(x);
+  const t = 1/(1+0.3275911*x);
+  const y = 1 - (((((1.061405429*t - 1.453152027)*t) + 1.421413741)*t - 0.284496736)*t + 0.254829592)*t*Math.exp(-x*x);
+  return s*y;
+};
+const Phi = z => 0.5*(1+erf(z/Math.SQRT2));
+function compare(r30, n30, r40, n40){
+  const p30 = r30/n30, p40 = r40/n40, d = p30 - p40;
+  const pp = (r30+r40)/(n30+n40);
+  const z = d / Math.sqrt(pp*(1-pp)*(1/n30+1/n40));           // pooled z-test
+  const se = Math.sqrt(p30*(1-p30)/n30 + p40*(1-p40)/n40);    // Wald CI
+  return {p30, p40, d, z, p: 2*(1-Phi(Math.abs(z))), lo: d-1.96*se, hi: d+1.96*se, se, lift: d/p40};
+}
+const A = DATA.gate_30, B = DATA.gate_40;
+const R1 = compare(A.r1, A.n, B.r1, B.n), R7 = compare(A.r7, A.n, B.r7, B.n);
+
+/* Beta posteriors (flat prior). With n ≈ 43k the Beta is effectively normal, so use its exact mean / sd. */
+const betaMS = (r, n) => { const a = r+1, b = n-r+1, m = a/(a+b); return {m, s: Math.sqrt(a*b/((a+b)**2*(a+b+1)))}; };
+const P30 = betaMS(A.r7, A.n), P40 = betaMS(B.r7, B.n);
+const dM = P30.m - P40.m, dS = Math.hypot(P30.s, P40.s);
+const probBetter = thr => 1 - Phi((thr - dM)/dS);
+
+const pct = (x, d=2) => (x*100).toFixed(d) + '%';
+const ppf = (x, d=2) => (x>=0?'+':'') + (x*100).toFixed(d) + ' pp';
+const fmtP = p => p < 0.001 ? '< 0.001' : p.toFixed(4);
+
+/* ---------- fill key numbers ---------- */
+const K = {
+  p30_7: pct(R7.p30), p40_7: pct(R7.p40), p30_1: pct(R1.p30), p40_1: pct(R1.p40),
+  lift: '+' + (R7.lift*100).toFixed(1) + '%', lift2: (R7.lift*100).toFixed(1) + '%',
+  pbetter: (probBetter(0)*100).toFixed(1) + '%', pp7: (R7.d*100).toFixed(2)
+};
+document.querySelectorAll('[data-k]').forEach(el => el.textContent = K[el.dataset.k]);
+const W = {p30_1: R1.p30, p40_1: R1.p40, p30_7: R7.p30, p40_7: R7.p40};
+requestAnimationFrame(() => document.querySelectorAll('[data-w]').forEach(el => el.style.width = (W[el.dataset.w]/0.5*100) + '%'));
+
+document.getElementById('statsBody').innerHTML = [['Day-7 retention', R7], ['Day-1 retention', R1]].map(([name, r]) =>
+  `<tr><td><b>${name}</b></td><td class="r">${pct(r.p30)}</td><td class="r">${pct(r.p40)}</td><td class="r">${ppf(r.d)}</td><td class="r">${r.z.toFixed(2)}</td>
+   <td class="r" style="color:${r.p<0.05?'var(--ok)':'var(--muted)'};font-weight:600">${fmtP(r.p)}</td><td class="r">${(r.lo*100).toFixed(2)} to ${(r.hi*100).toFixed(2)}</td></tr>`).join('');
+
+/* ---------- SVG helper ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+
+/* ---------- level paths ---------- */
+const narrow = () => window.innerWidth < 600;
+function drawPath(id, gate, color){
+  const svg = document.getElementById(id), N = 50, VW = narrow() ? 460 : 900, x0 = 14, step = (VW-28)/(N-1);
+  svg.innerHTML = ''; svg.setAttribute('viewBox', `0 0 ${VW} 50`);
+  el('line', {x1:x0, y1:25, x2:VW-x0, y2:25, stroke:'var(--soft)', 'stroke-width':6, 'stroke-linecap':'round'}, svg);
+  el('line', {x1:x0, y1:25, x2:x0+(gate-1)*step, y2:25, stroke:color, 'stroke-width':6, 'stroke-linecap':'round', opacity:.35}, svg);
+  for (let i = 1; i <= N; i++){
+    const x = x0 + (i-1)*step;
+    const small = VW < 900;
+    if (i === gate){
+      el('rect', {x:x-12, y:5, width:24, height:40, rx:8, fill:color}, svg);
+      el('text', {x, y:31, 'text-anchor':'middle', 'font-size':small ? 13 : 16}, svg, '🔒');
+    } else {
+      el('circle', {cx:x, cy:25, r: (i%10===0 ? 6 : 4.5) * (small ? .7 : 1), fill: i<gate ? color : 'var(--muted)', opacity: i<gate ? 1 : .35}, svg);
+    }
+    if (i%10 === 0 && i !== gate) el('text', {x, y:49, 'text-anchor':'middle', 'font-size':small ? 13 : 11, fill:'var(--muted)'}, svg, i);
+  }
+}
+const drawPaths = () => { drawPath('path30', 30, 'var(--g30)'); drawPath('path40', 40, 'var(--g40)'); };
+drawPaths();
+
+/* ---------- survivor-bias toggle ---------- */
+const trapCase = {
+  all: {a: R7.p30, b: R7.p40, note: `<b>Fair comparison.</b> Both groups were randomly assigned, so the only systematic difference is the gate. Gate 30 retains more players at day 7.`, bg: 'var(--ok-bg)'},
+  reached: {a: REACHED.g30.r7/REACHED.g30.n, b: REACHED.g40.r7/REACHED.g40.n,
+    note: `<b>Survivor bias: gate 40 suddenly "wins".</b> Reaching round 40 takes more dedication than reaching round 30, so this filter keeps only gate 40's most committed players (68% dropped vs 61% for gate 30). Filtering on something measured <i>after</i> assignment breaks the randomization. I rejected this filter.`, bg: 'var(--warn-bg)'}
+};
+function setTrap(key){
+  const c = trapCase[key];
+  document.querySelectorAll('[data-trap]').forEach(b => b.setAttribute('aria-pressed', b.dataset.trap === key));
+  document.getElementById('trap30').style.width = (c.a/0.6*100) + '%';
+  document.getElementById('trap40').style.width = (c.b/0.6*100) + '%';
+  document.getElementById('trap30n').textContent = pct(c.a, 1);
+  document.getElementById('trap40n').textContent = pct(c.b, 1);
+  const n = document.getElementById('trapNote'); n.innerHTML = c.note; n.style.background = c.bg;
+}
+document.querySelectorAll('[data-trap]').forEach(b => b.addEventListener('click', () => setTrap(b.dataset.trap)));
+requestAnimationFrame(() => setTrap('all'));
+
+/* ---------- tooltip helper ---------- */
+function showTip(tip, box, x, y, html){
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const w = box.clientWidth, tw = tip.offsetWidth;
+  tip.style.left = Math.min(Math.max(x, tw/2+4), w - tw/2 - 4) + 'px'; tip.style.top = y + 'px';
+}
+
+/* ---------- CI chart ---------- */
+(function(){
+  const svg = document.getElementById('ciChart'), tip = document.getElementById('ciTip'), box = svg.parentNode;
+  const L = 80, Rr = 425, lo = -0.5, hi = 1.5, X = v => L + (v - lo)/(hi - lo)*(Rr - L);
+  for (let v = -0.5; v <= 1.5001; v += 0.5){
+    el('line', {x1:X(v), y1:20, x2:X(v), y2:165, stroke:'var(--soft)', 'stroke-width': v===0 ? 0 : 1}, svg);
+    el('text', {x:X(v), y:185, 'text-anchor':'middle', 'font-size':12, fill:'var(--muted)'}, svg, (v>0?'+':'') + v.toFixed(1));
+  }
+  el('line', {x1:X(0), y1:14, x2:X(0), y2:168, stroke:'var(--accent)', 'stroke-width':2, 'stroke-dasharray':'5 5'}, svg);
+  el('text', {x:X(0), y:12, 'text-anchor':'middle', 'font-size':11, fill:'var(--accent)'}, svg, 'no difference');
+  [['Day 7', R7, 62, 'var(--g30)'], ['Day 1', R1, 125, 'var(--muted)']].forEach(([name, r, y, c]) => {
+    el('text', {x:0, y:y+5, 'font-size':15, 'font-weight':600, fill:'var(--ink)'}, svg, name);
+    const g = el('g', {style:'cursor:pointer'}, svg);
+    el('rect', {x:X(r.lo*100), y:y-16, width:X(r.hi*100)-X(r.lo*100), height:32, fill:'transparent'}, g);
+    el('line', {x1:X(r.lo*100), y1:y, x2:X(r.hi*100), y2:y, stroke:c, 'stroke-width':10, 'stroke-linecap':'round', opacity:.35}, g);
+    el('circle', {cx:X(r.d*100), cy:y, r:9, fill:c, stroke:'var(--card)', 'stroke-width':3}, g);
+    el('text', {x:X(r.d*100), y:y-16, 'text-anchor':'middle', 'font-size':13, 'font-weight':600, fill:'var(--ink)'}, g, ppf(r.d));
+    const html = `<b>${name}</b><br>Observed: ${ppf(r.d)}<br>95% CI: ${ppf(r.lo)} to ${ppf(r.hi)}<br>${r.lo > 0 ? 'Entirely above zero ✓' : 'Includes zero'}`;
+    const show = e => { const b = box.getBoundingClientRect(); showTip(tip, box, (e.clientX ?? e.touches?.[0]?.clientX) - b.left, y/212*box.clientHeight - 10, html); };
+    g.addEventListener('mousemove', show); g.addEventListener('click', show);
+    g.addEventListener('mouseleave', () => tip.style.opacity = 0);
+  });
+  el('text', {x:(L+Rr)/2, y:200, 'text-anchor':'middle', 'font-size':12, fill:'var(--muted)'}, svg, 'gate 30 − gate 40 (percentage points)');
+})();
+
+/* ---------- posterior chart ---------- */
+(function(){
+  const svg = document.getElementById('postChart');
+  const L = 10, Rr = 430, T = 15, Bm = 180, lo = 0.182, hi = 0.205;
+  const X = v => L + (v-lo)/(hi-lo)*(Rr-L);
+  const pdf = (x, m, s) => Math.exp(-0.5*((x-m)/s)**2)/(s*Math.sqrt(2*Math.PI));
+  const peak = Math.max(pdf(P30.m, P30.m, P30.s), pdf(P40.m, P40.m, P40.s));
+  const Y = v => Bm - v/peak*(Bm-T-10);
+  [0.185, 0.19, 0.195, 0.2].forEach(v => {
+    el('line', {x1:X(v), y1:T, x2:X(v), y2:Bm, stroke:'var(--soft)'}, svg);
+    el('text', {x:X(v), y:Bm+20, 'text-anchor':'middle', 'font-size':12, fill:'var(--muted)'}, svg, (v*100).toFixed(1) + '%');
+  });
+  el('line', {x1:L, y1:Bm, x2:Rr, y2:Bm, stroke:'var(--muted)', opacity:.4}, svg);
+  [[P40, 'var(--g40)', R7.p40], [P30, 'var(--g30)', R7.p30]].forEach(([P, c, obs]) => {
+    let d = `M${X(lo)},${Bm}`;
+    for (let i = 0; i <= 200; i++){ const x = lo + (hi-lo)*i/200; d += ` L${X(x).toFixed(1)},${Y(pdf(x, P.m, P.s)).toFixed(1)}`; }
+    d += ` L${X(hi)},${Bm} Z`;
+    el('path', {d, fill:c, 'fill-opacity':.18, stroke:c, 'stroke-width':3, 'stroke-linejoin':'round'}, svg);
+    el('text', {x:X(P.m), y:Y(pdf(P.m, P.m, P.s)) - 6, 'text-anchor':'middle', 'font-size':13, 'font-weight':600, fill:c}, svg, pct(obs));
+  });
+})();
+
+/* threshold slider */
+(function(){
+  const s = document.getElementById('thr');
+  const upd = () => {
+    const t = +s.value, p = probBetter(t/100);
+    document.getElementById('thrOut').textContent = t.toFixed(2) + ' pp';
+    document.getElementById('thrProb').textContent = (p*100).toFixed(1) + '%';
+    document.getElementById('thrText').innerHTML = t === 0
+      ? 'probability that gate 30 has the higher true 7-day retention'
+      : `probability that gate 30 is better by <b>at least ${t.toFixed(2)} pp</b>`;
+  };
+  s.addEventListener('input', upd); upd();
+})();
+
+/* ---------- survival chart (redrawn with a narrower canvas on phones so text stays readable) ---------- */
+function drawSurv(){
+  const svg = document.getElementById('survChart'), tip = document.getElementById('survTip'), box = svg.parentNode;
+  const VW = narrow() ? 440 : 900, VH = narrow() ? 300 : 345;
+  svg.innerHTML = ''; svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  const L = 44, Rr = VW - 15, T = 15, Bm = VH - 55, X = k => L + (k-1)/99*(Rr-L), Y = v => Bm - v/100*(Bm-T);
+  [0, 25, 50, 75, 100].forEach(v => {
+    el('line', {x1:L, y1:Y(v), x2:Rr, y2:Y(v), stroke:'var(--soft)'}, svg);
+    el('text', {x:L-8, y:Y(v)+4, 'text-anchor':'end', 'font-size':13, fill:'var(--muted)'}, svg, v + '%');
+  });
+  [1, 20, 40, 60, 80, 100].forEach(k => el('text', {x:X(k), y:Bm+22, 'text-anchor':'middle', 'font-size':13, fill:'var(--muted)'}, svg, k));
+  el('text', {x:(L+Rr)/2, y:Bm+40, 'text-anchor':'middle', 'font-size':13, fill:'var(--muted)'}, svg, 'game rounds played (k)');
+  [[30, 'var(--g30)', 'gate 30', -6, 'end'], [40, 'var(--g40)', 'gate 40', 6, 'start']].forEach(([k, c, t, dx, anchor]) => {
+    el('line', {x1:X(k), y1:T, x2:X(k), y2:Bm, stroke:c, 'stroke-width':2, 'stroke-dasharray':'6 6'}, svg);
+    el('text', {x:X(k)+dx, y:T+14, 'text-anchor':anchor, 'font-size':13, fill:c, 'font-weight':600}, svg, '🔒 ' + t);
+  });
+  [[B, 'var(--g40)'], [A, 'var(--g30)']].forEach(([g, c]) =>
+    el('polyline', {points: g.surv.map((v, i) => `${X(i+1).toFixed(1)},${Y(v).toFixed(1)}`).join(' '), fill:'none', stroke:c, 'stroke-width':3.5, 'stroke-linejoin':'round'}, svg));
+  const cross = el('line', {x1:0, y1:T, x2:0, y2:Bm, stroke:'var(--ink)', opacity:0}, svg);
+  const d30 = el('circle', {r:6, fill:'var(--g30)', stroke:'var(--card)', 'stroke-width':2, opacity:0}, svg);
+  const d40 = el('circle', {r:6, fill:'var(--g40)', stroke:'var(--card)', 'stroke-width':2, opacity:0}, svg);
+  const overlay = el('rect', {x:L, y:T, width:Rr-L, height:Bm-T, fill:'transparent', style:'cursor:crosshair'}, svg);
+  const move = e => {
+    const b = svg.getBoundingClientRect(), cx = (e.touches ? e.touches[0].clientX : e.clientX) - b.left;
+    const vx = cx / b.width * VW, k = Math.min(100, Math.max(1, Math.round((vx - L)/(Rr-L)*99 + 1)));
+    const a = A.surv[k-1], bb = B.surv[k-1];
+    [cross, d30, d40].forEach(n => n.setAttribute('opacity', 1)); cross.setAttribute('opacity', .25);
+    cross.setAttribute('x1', X(k)); cross.setAttribute('x2', X(k));
+    d30.setAttribute('cx', X(k)); d30.setAttribute('cy', Y(a)); d40.setAttribute('cx', X(k)); d40.setAttribute('cy', Y(bb));
+    showTip(tip, box, X(k)/VW*b.width, Y(Math.max(a, bb))/VH*b.height - 12,
+      `<b>Played ≥ ${k} rounds</b><br><span style="color:var(--g30)">●</span> Gate 30: ${a.toFixed(1)}%<br><span style="color:var(--g40)">●</span> Gate 40: ${bb.toFixed(1)}%`);
+  };
+  overlay.addEventListener('mousemove', move); overlay.addEventListener('touchmove', move, {passive:true}); overlay.addEventListener('touchstart', move, {passive:true});
+  overlay.addEventListener('mouseleave', () => { tip.style.opacity = 0; [cross, d30, d40].forEach(n => n.setAttribute('opacity', 0)); });
+}
+drawSurv();
+let wasNarrow = narrow();
+window.addEventListener('resize', () => { if (narrow() !== wasNarrow){ wasNarrow = narrow(); drawPaths(); drawSurv(); } });
+
+/* ---------- impact calculator ---------- */
+(function(){
+  const inst = document.getElementById('inst'), val = document.getElementById('val');
+  const inr = x => x >= 1e7 ? '₹' + (x/1e7).toFixed(2) + ' Cr' : x >= 1e5 ? '₹' + (x/1e5).toFixed(1) + ' lakh' : '₹' + Math.round(x).toLocaleString('en-IN');
+  const upd = () => {
+    const i = +inst.value, v = +val.value;
+    document.getElementById('instOut').textContent = i.toLocaleString('en-IN');
+    document.getElementById('valOut').textContent = '₹' + v;
+    [['Lo', R7.lo], ['Mid', R7.d], ['Hi', R7.hi]].forEach(([id, d]) => {
+      const players = i*d;
+      document.getElementById('imp' + id).textContent = inr(players*v*365) + ' / yr';
+      document.getElementById('imp' + id + 'S').textContent = `${Math.round(players).toLocaleString('en-IN')} extra retained players per day · ${ppf(d)}`;
+    });
+  };
+  inst.addEventListener('input', upd); val.addEventListener('input', upd); upd();
+})();
+
+/* ---------- theme toggle ---------- */
+(function(){
+  const btn = document.getElementById('themeBtn'), root = document.documentElement;
+  const isDark = () => root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  try { const saved = localStorage.getItem('theme'); if (saved) root.dataset.theme = saved; } catch (e) {}
+  const sync = () => btn.textContent = isDark() ? '☀️' : '🌙';
+  btn.addEventListener('click', () => { root.dataset.theme = isDark() ? 'light' : 'dark'; try { localStorage.setItem('theme', root.dataset.theme); } catch (e) {} sync(); });
+  sync();
+})();
+</script>
+</body>
+</html>

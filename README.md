@@ -1,61 +1,64 @@
-# Cookie Cats A/B Test Analysis
+# Gate 30 vs Gate 40: Mobile Game A/B Test
+
+**Live site:** https://sheljasolanki.github.io/A-B-testing/ · **Full analysis:** [Testing.ipynb](Testing.ipynb)
 
 ## Business Problem
-Cookie Cats is a mobile puzzle game that uses gates to force players 
-to wait before continuing. This project analyzes whether placing the 
-gate at level 30 vs level 40 better retains players after 7 days.
+In the mobile puzzle game *Cookie Cats*, gates force players to wait (or pay) before they can continue. New players were randomly given the first gate at **level 30** (control) or **level 40** (treatment). This project tests which placement keeps more players coming back **7 days after install**.
 
 ## Dataset
 - 90,189 players from a randomized A/B test
-- Features: version (gate_30/gate_40), sum_gamerounds, 
-  retention_1, retention_7
-- Source: Kaggle — Cookie Cats Dataset
+- Columns: `version` (gate_30 / gate_40), `sum_gamerounds` (rounds played in the first 14 days), `retention_1`, `retention_7`
+- Source: [Mobile Games A/B Testing (Kaggle)](https://www.kaggle.com/datasets/yufengsui/mobile-games-ab-testing)
 
 ## Methodology
-- **mITT Filtering** — removed 5,000 players who never played 
-  a single round as the gate could not influence their behavior
-- **Z-test for proportions** — tested statistical significance 
-  of retention difference
-- **Confidence Intervals** — estimated range of true difference
-- **Bayesian Analysis** — calculated probability gate_30 is 
-  genuinely better using Beta distribution
-- **Business Impact** — translated retention difference into 
-  annual revenue impact
+1. **Data quality checks:** duplicates, missing values, and a 49,854-round logging outlier
+2. **Sample ratio mismatch (SRM) check:** chi-square test of the 50/50 split
+3. **Modified intention-to-treat (mITT):** removed 3,994 players with 0 rounds, after checking that both groups lose a similar share (p = 0.17)
+4. **Survivor-bias check:** showed why filtering to "players who reached their gate" is invalid (it filters on a post-treatment variable)
+5. **Two-proportion z-test** and **95% confidence intervals** for day-1 and day-7 retention
+6. **Power analysis:** power for the observed effect and the minimum detectable effect
+7. **Bayesian Beta-Binomial model:** probability that gate 30 is truly better
+8. **Gameplay analysis:** share of players who played at least *k* rounds in each version
+9. **Business impact:** retention gap × daily installs × value per retained player, as a range from the CI
 
 ## Key Findings
-| Metric | Gate 30 | Gate 40 |
-|--------|---------|---------|
-| 7-day retention | 19.84% | 19.03% |
-| 1-day retention | 46.8% | 45.9% |
+| Metric | Gate 30 | Gate 40 | Difference | Result |
+|---|---|---|---|---|
+| 7-day retention | 19.84% | 19.03% | +0.81 pp (+4.3% relative) | **significant**, p = 0.0026 |
+| 1-day retention | 46.75% | 46.22% | +0.54 pp | not significant, p = 0.11 |
 
-- Z-test p-value: 0.0026 (statistically significant)
-- 95% CI: (0.284%, 1.341%) — entirely above zero
-- Bayesian probability gate_30 is better: 99.86%
-- Annual revenue at risk if switching to gate_40: ₹2.6L — ₹12.2L
+- 95% CI for the 7-day difference: **+0.28 pp to +1.34 pp**, entirely above zero
+- Test power for the observed 7-day effect: ~85% (MDE ≈ 0.76 pp)
+- Bayesian probability that gate 30 has the higher 7-day retention: **≈ 99.9%**
+- Rounds played are nearly identical between versions (about 32% of players in both pass round 40). The gate changes whether players *return*, not visibly how much they play.
+- Illustrative impact (50,000 installs/day, ₹5 per retained player): switching to gate 40 would cost about **₹2.6 – 12.2 lakh per year**
 
 ## Recommendation
-Keep the gate at level 30. Both frequentist and Bayesian analysis 
-confirm gate_30 retains more players, and this difference is 
-unlikely to be due to random chance.
+**Keep the gate at level 30.** The effect is small, but frequentist and Bayesian analyses agree, and the experiment had enough power to detect it.
+
+## Limitations
+- **Sample ratio mismatch:** the split is 49.6% / 50.4% (p = 0.0086). The cause should be investigated before acting.
+- Revenue figures are illustrative. Real install volume and player LTV are needed.
+- Only day-1 and day-7 retention are available. Long-term retention, purchases and novelty effects are not measured.
+- `sum_gamerounds` counts rounds (including replays), not levels reached.
 
 ## Project Structure
-├── cookie_cats.csv          # Raw dataset
-
-├── Testing.ipynb            # Full analysis notebook
-
-├── app.py                   # Streamlit interactive app
-
+```
+├── index.html        # Interactive one-page results site (no dependencies)
+├── Testing.ipynb     # Full analysis notebook
+├── cookie_cats.csv   # Raw dataset
+├── requirements.txt  # Python dependencies for the notebook
 └── README.md
+```
 
 ## How to Run
 ```bash
-# Install dependencies
-pip install pandas numpy scipy statsmodels matplotlib seaborn streamlit plotly
+# Notebook
+pip install -r requirements.txt
+jupyter notebook Testing.ipynb
 
-# Run the Streamlit app
-streamlit run app.py
+# Website: just open index.html in a browser (or see the live link above)
 ```
 
 ## Tools Used
-Python, Pandas, NumPy, SciPy, Statsmodels, Matplotlib, 
-Seaborn, Plotly, Streamlit
+Python, pandas, NumPy, SciPy, statsmodels, Matplotlib, seaborn, plus HTML/CSS/JavaScript for the interactive site.
