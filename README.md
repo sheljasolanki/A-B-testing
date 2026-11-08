@@ -40,7 +40,7 @@ In the mobile puzzle game *Cookie Cats*, gates force players to wait (or pay) be
 - **Sample ratio mismatch:** the split is 49.6% / 50.4% (p = 0.0086). The cause should be investigated before acting.
 - Revenue figures are illustrative. Real install volume and player LTV are needed.
 - Only day-1 and day-7 retention are available. Long-term retention, purchases and novelty effects are not measured.
-- `sum_gamerounds` counts rounds (including replays), not levels reached.
+- `sum_gamerounds` counts rounds (including replays), not levels reached
 
 ## Project Structure
 ```
